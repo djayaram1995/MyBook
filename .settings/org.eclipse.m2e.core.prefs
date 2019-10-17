@@ -1,4 +1,380 @@
-activeProfiles=
-eclipse.preferences.version=1
-resolveWorkspaceProjects=true
-version=1
+FavoriteBooksController----------------------
+package com.stackroute.userservice.controller;
+
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.stackroute.userservice.model.BookDetails;
+import com.stackroute.userservice.service.BookKeeperService;
+
+@RestController
+public class FavoriteBooksController {
+	@Autowired
+	private BookKeeperService bookKeeperService;
+	
+	@PostMapping("/save")
+	
+	public BookDetails SaveBook(@RequestBody BookDetails bookdetails, HttpServletRequest req) {
+		bookKeeperService.saveBook(bookdetails, req);
+		return bookdetails;		
+	}
+	@GetMapping("/isFavorite")
+	
+	public boolean isFavoriteBook(@RequestParam String url, HttpServletRequest req) {
+		boolean isFavorite = false;
+		isFavorite = bookKeeperService.isFavorite(url, req);
+		return isFavorite;	
+	}
+	
+	@GetMapping("/list")
+	
+	public List<BookDetails> getAllBook(HttpServletRequest req) {
+		return bookKeeperService.getAllBooks(req);		
+	}
+	@DeleteMapping("/delete")
+	
+	public String deleteBook(@RequestParam String url, HttpServletRequest req) {
+		
+		return bookKeeperService.deleteBook(url, req);		
+	}
+
+}
+JwtUserService---------------
+package com.stackroute.userservice.service;
+
+import java.util.ArrayList;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import com.stackroute.userservice.dao.UserDao;
+import com.stackroute.userservice.model.DAOUser;
+import com.stackroute.userservice.model.UserDTO;
+
+@Service
+public class JwtUserService implements UserDetailsService {
+	@Autowired
+	private UserDao userDao;
+
+	@Autowired
+	private PasswordEncoder bcryptEncoder;
+
+	@Override
+	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+		DAOUser user = userDao.findByUsername(username);
+		if (user == null) {
+			throw new UsernameNotFoundException("User not found with username: " + username);
+		}
+		return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPassword(),
+				new ArrayList<>());
+
+	}
+
+	public DAOUser save(UserDTO user) throws Exception {
+		DAOUser userName=userDao.findByUsername(user.getUsername());
+		if(userName == null) {
+			DAOUser newUser = new DAOUser();
+			newUser.setUsername(user.getUsername());
+			newUser.setPassword(bcryptEncoder.encode(user.getPassword()));
+			return userDao.save(newUser);
+		} else {
+			throw new Exception("User name taken with username: " + user.getUsername());
+		}
+	}
+}
+
+BookKeeperService---------------------------------
+package com.stackroute.userservice.service;
+
+import java.io.IOException;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stackroute.userservice.jwt.JwtTokenUtil;
+import com.stackroute.userservice.model.BookDetails;
+
+@Service
+public class BookKeeperService {
+	
+	@Autowired
+	private JwtTokenUtil jwtTokenUtil;
+	
+	public String getUsername(HttpServletRequest req) {
+		String auth = req.getHeader("Authorization").substring(7);
+		return jwtTokenUtil.getUsernameFromToken(auth);
+		
+	}
+	public void saveBook(BookDetails bdd, HttpServletRequest req) {
+		String username = getUsername(req);
+		RestTemplate restTemplate = new RestTemplate();
+		restTemplate.postForEntity("http://localhost:8765/save?user="+username, bdd, String.class);
+	}
+	public List<BookDetails> getAllBooks(HttpServletRequest req) {
+		String username = getUsername(req);
+		RestTemplate restTemplate = new RestTemplate();
+		ResponseEntity<String> bdd = restTemplate.getForEntity("http://localhost:8765/list?user="+username+"&user="+username, String.class);
+		ObjectMapper mapper = new ObjectMapper();
+		List<BookDetails> bd = null;
+		try {
+			bd = mapper.readValue(bdd.getBody(), List.class);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return bd;
+		
+	}
+	public String deleteBook(String url, HttpServletRequest req) {
+		String username = getUsername(req);
+		RestTemplate restTemplate = new RestTemplate();
+		restTemplate.delete("http://localhost:8765/delete?url="+url+"&user="+username);
+		return "deleted";
+	}
+	public boolean isFavorite(String url, HttpServletRequest req) {
+		String username = getUsername(req);
+		RestTemplate restTemplate = new RestTemplate();
+		ResponseEntity<Boolean> bd = restTemplate.getForEntity("http://localhost:8765/isFavorite?url="+url+"&user="+username, Boolean.class);
+		return bd.getBody();
+	}
+	
+}
+FavoriteBooksController--------------
+
+package com.stackroute.favouriteservice.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.stackroute.favouriteservice.model.BookDetails;
+import com.stackroute.favouriteservice.model.BookDetailsDto;
+import com.stackroute.favouriteservice.service.BookKeeperService;
+
+@RestController
+public class FavoriteBooksController {
+	@Autowired
+	private BookKeeperService bookKeeperService;
+	
+	@PostMapping("/save")
+	public BookDetailsDto SaveBook(@RequestBody BookDetailsDto bookdetails, @RequestParam String user) {
+		bookKeeperService.saveBook(bookdetails, user);
+		return bookdetails;		
+	}
+	@GetMapping("/isFavorite")
+	public boolean isFavoriteBook(@RequestParam String url, @RequestParam String user) {
+		boolean isFavorite = false;
+		isFavorite = bookKeeperService.isFavorite(url, user);
+		return isFavorite;	
+	}
+	
+	@GetMapping("/list")
+	public List<BookDetails> getAllBook(@RequestParam String user) {
+		return bookKeeperService.getAllBooks(user);		
+	}
+	@DeleteMapping("/delete")
+	public String deleteBook(@RequestParam String url, @RequestParam String user) {
+		
+		return bookKeeperService.deleteBook(url, user);		
+	}
+
+}
+
+UserFavoriteDao------------
+package com.stackroute.favouriteservice.dao;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
+
+import com.stackroute.favouriteservice.model.UserFavorite;
+
+@Repository
+public interface UserFavoriteDao extends CrudRepository<UserFavorite, Integer>  {
+	
+	public List<UserFavorite> findByUser(String user);
+	
+	public List<UserFavorite> findByBookUrl(String bookUrl);
+	
+	public List<UserFavorite> findByBookUrlAndUser(String bookUrl, String user);
+	@Query(
+			  value = "SELECT * FROM USER_FAVORITE u WHERE u.BOOK_URL = ?1 AND NOT USER = ?2", 
+			  nativeQuery = true)
+	public List<UserFavorite> findByBookUrlAndIsNotUser(String url, String user);
+	
+}
+UserFavorite--------------------
+
+package com.stackroute.favouriteservice.model;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+
+@Entity
+public class UserFavorite {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private Long id;
+
+	private String user;
+	
+	private String bookUrl;  
+	
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public String getUser() {
+		return user;
+	}
+
+	public void setUser(String user) {
+		this.user = user;
+	}
+
+	public String getBookUrl() {
+		return bookUrl;
+	}
+
+	public void setBookUrl(String bookUrl) {
+		this.bookUrl = bookUrl;
+	}
+
+	public UserFavorite(String user, String bookUrl) {
+		super();
+		this.user = user;
+		this.bookUrl = bookUrl;
+	}
+
+	public UserFavorite() {
+		super();
+	}
+
+	
+
+}
+
+BookKeeperService---------------------
+
+package com.stackroute.favouriteservice.service;
+
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.stackroute.favouriteservice.dao.BookDao;
+import com.stackroute.favouriteservice.dao.UserFavoriteDao;
+import com.stackroute.favouriteservice.model.BookDetails;
+import com.stackroute.favouriteservice.model.BookDetailsDto;
+import com.stackroute.favouriteservice.model.UserFavorite;
+
+@Service
+public class BookKeeperService {
+
+	@Autowired
+	private BookDao bookDao;
+	
+	@Autowired
+	private UserFavoriteDao userFavoriteDao;
+	
+	public void saveBook(BookDetailsDto bdd, String user) {
+		ObjectMapper mapper = new ObjectMapper();
+			try {
+				BookDetails bd = mapper.readValue(mapper.writeValueAsString(bdd), BookDetails.class);
+				BookDetails bdExist = bookDao.findByUrl(bd.getUrl());
+				if(bdExist == null) {
+					BookDetails bdSave = bookDao.save(bd);
+					UserFavorite usrFav = new UserFavorite(user, bdSave.getUrl());
+					userFavoriteDao.save(usrFav);
+				} else {
+					List<UserFavorite> usrFavList =userFavoriteDao.findByBookUrlAndUser(bdExist.getUrl(), user);
+					if(usrFavList.size()<1) {
+						UserFavorite usrFav = new UserFavorite(user, bdExist.getUrl());
+						userFavoriteDao.save(usrFav);
+					}
+				}
+				
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	}
+	public List<BookDetails> getAllBooks(String user) {
+		List<UserFavorite> userList = userFavoriteDao.findByUser(user);
+		List<BookDetails> bd =  new ArrayList<BookDetails>();
+		if(userList.size() > 0) {
+			for (UserFavorite usrFav: userList) {
+				bd.add(bookDao.findByUrl(usrFav.getBookUrl()));
+			}
+		}
+		return bd;
+		
+	}
+	public String deleteBook(String url, String user) {
+		List<UserFavorite> userList = userFavoriteDao.findByBookUrlAndUser(url, user);
+		String out="Not Found";
+		
+		if(userList.size() > 0) {
+			userFavoriteDao.delete(userList.get(0));
+		}
+		List<UserFavorite> userUrlList = userFavoriteDao.findByBookUrlAndIsNotUser(url, user);
+		if(userUrlList.size() == 0 ) {
+		BookDetails bd = bookDao.findByUrl(url);
+		if(bd != null) {
+			
+			bookDao.delete(bd);
+		}
+		}
+		out= "deleted";
+		return out;
+	}
+	public boolean isFavorite(String url, String user) {
+		List<UserFavorite> userList = userFavoriteDao.findByBookUrlAndUser(url, user);
+		return (userList.size() == 1);
+	}
+	
+}
+
+
