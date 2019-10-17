@@ -14,11 +14,7 @@ private addToFavURL : string;
 private getBookURL :string;
 private currentBook: BOOK;
 private bookList: BOOK[];
-private httpOptions: {} = {
-  headers: {
-      'Authorization': 'Bearer '+localStorage.getItem("accessToken"),
-  }
-};
+
   constructor(
     private http: HttpClient,
     private userService: UserService
@@ -28,9 +24,16 @@ private httpOptions: {} = {
         this.getBookURL = 'http://localhost:9876/getBook';
   }
 
+  httpOptions(): object {
+    return {
+      headers: {
+      'Authorization': 'Bearer '+localStorage.getItem("accessToken"),
+      }
+    }
+  }
   getAllBooks(): Observable<any> {
     
-    return this.http.get<any>(this.bookListURL, this.httpOptions);
+    return this.http.get<any>(this.bookListURL, this.httpOptions());
 
 }
 setCurrentBook(currBook: BOOK) {
@@ -46,19 +49,19 @@ getBookList() {
   return this.bookList;
 }
 getBooks(searchString: string) {
-  return this.http.get<any>(`${this.bookListURL}/${searchString}`, this.httpOptions)
+  return this.http.get<any>(`${this.bookListURL}/${searchString}`, this.httpOptions())
 }
 getBook(OLID: string) {
-  return this.http.get<any>(`${this.getBookURL}/${OLID}`, this.httpOptions)
+  return this.http.get<any>(`${this.getBookURL}/${OLID}`, this.httpOptions())
 }
 
 saveAsFavBook(favBook): Observable<any> {
   
-  return this.http.post<any>(this.addToFavURL, favBook, this.httpOptions );
+  return this.http.post<any>(this.addToFavURL, favBook, this.httpOptions() );
 }
 
 getAllFavList(): Observable<any> {
-  return this.http.get<any>(this.bookListURL, this.httpOptions);
+  return this.http.get<any>(this.bookListURL, this.httpOptions());
 }
 
 
