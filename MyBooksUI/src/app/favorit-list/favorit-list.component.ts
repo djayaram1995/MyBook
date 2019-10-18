@@ -33,6 +33,7 @@ export class FavoritListComponent implements OnInit {
     this.router.navigate(["dashboard"]);
   }
   logOut() {
+    this.bookService.deleteBooklist();
     localStorage.removeItem("accessToken");
     this.router.navigate(["login"]);
   }

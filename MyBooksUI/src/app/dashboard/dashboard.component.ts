@@ -52,6 +52,7 @@ export class DashboardComponent {
     });
   }
   logOut() {
+    this.bookService.deleteBooklist();
     localStorage.removeItem("accessToken");
     this.router.navigate(["login"]);
   }
