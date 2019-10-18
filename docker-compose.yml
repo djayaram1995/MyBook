@@ -11,7 +11,7 @@ services:
    environment:
      MYSQL_ROOT_PASSWORD: root
      MYSQL_DATABASE: bookdb
-     MYSQL_USER: root
+     MYSQL_USER: book
      MYSQL_PASSWORD: root
 
   spring:
@@ -38,6 +38,8 @@ services:
 
   angular:
     image: angular-books-app
+    build: MyBooksUI/
+    restart: always
     network_mode: host
     container_name: angular-docker
     ports:
