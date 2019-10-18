@@ -32,10 +32,15 @@ public class JwtUserService implements UserDetailsService {
 
 	}
 
-	public DAOUser save(UserDTO user) {
-		DAOUser newUser = new DAOUser();
-		newUser.setUsername(user.getUsername());
-		newUser.setPassword(bcryptEncoder.encode(user.getPassword()));
-		return userDao.save(newUser);
+	public DAOUser save(UserDTO user) throws Exception {
+		DAOUser userName=userDao.findByUsername(user.getUsername());
+		if(userName == null) {
+			DAOUser newUser = new DAOUser();
+			newUser.setUsername(user.getUsername());
+			newUser.setPassword(bcryptEncoder.encode(user.getPassword()));
+			return userDao.save(newUser);
+		} else {
+			throw new Exception("User name taken with username: " + user.getUsername());
+		}
 	}
 }

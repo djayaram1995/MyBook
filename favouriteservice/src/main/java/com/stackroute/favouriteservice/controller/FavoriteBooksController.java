@@ -21,25 +21,25 @@ public class FavoriteBooksController {
 	private BookKeeperService bookKeeperService;
 	
 	@PostMapping("/save")
-	public BookDetailsDto SaveBook(@RequestBody BookDetailsDto bookdetails) {
-		bookKeeperService.saveBook(bookdetails);
+	public BookDetailsDto SaveBook(@RequestBody BookDetailsDto bookdetails, @RequestParam String user) {
+		bookKeeperService.saveBook(bookdetails, user);
 		return bookdetails;		
 	}
 	@GetMapping("/isFavorite")
-	public boolean isFavoriteBook(@RequestParam String url) {
+	public boolean isFavoriteBook(@RequestParam String url, @RequestParam String user) {
 		boolean isFavorite = false;
-		isFavorite = bookKeeperService.isFavorite(url);
+		isFavorite = bookKeeperService.isFavorite(url, user);
 		return isFavorite;	
 	}
 	
 	@GetMapping("/list")
-	public List<BookDetails> getAllBook() {
-		return bookKeeperService.getAllBooks();		
+	public List<BookDetails> getAllBook(@RequestParam String user) {
+		return bookKeeperService.getAllBooks(user);		
 	}
 	@DeleteMapping("/delete")
-	public String deleteBook(@RequestParam String url) {
+	public String deleteBook(@RequestParam String url, @RequestParam String user) {
 		
-		return bookKeeperService.deleteBook(url);		
+		return bookKeeperService.deleteBook(url, user);		
 	}
 
 }

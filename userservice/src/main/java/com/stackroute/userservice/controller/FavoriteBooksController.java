@@ -2,6 +2,8 @@ package com.stackroute.userservice.controller;
 
 import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,28 +23,28 @@ public class FavoriteBooksController {
 	
 	@PostMapping("/save")
 	
-	public BookDetails SaveBook(@RequestBody BookDetails bookdetails) {
-		bookKeeperService.saveBook(bookdetails);
+	public BookDetails SaveBook(@RequestBody BookDetails bookdetails, HttpServletRequest req) {
+		bookKeeperService.saveBook(bookdetails, req);
 		return bookdetails;		
 	}
 	@GetMapping("/isFavorite")
 	
-	public boolean isFavoriteBook(@RequestParam String url) {
+	public boolean isFavoriteBook(@RequestParam String url, HttpServletRequest req) {
 		boolean isFavorite = false;
-		isFavorite = bookKeeperService.isFavorite(url);
+		isFavorite = bookKeeperService.isFavorite(url, req);
 		return isFavorite;	
 	}
 	
 	@GetMapping("/list")
 	
-	public List<BookDetails> getAllBook() {
-		return bookKeeperService.getAllBooks();		
+	public List<BookDetails> getAllBook(HttpServletRequest req) {
+		return bookKeeperService.getAllBooks(req);		
 	}
 	@DeleteMapping("/delete")
 	
-	public String deleteBook(@RequestParam String url) {
+	public String deleteBook(@RequestParam String url, HttpServletRequest req) {
 		
-		return bookKeeperService.deleteBook(url);		
+		return bookKeeperService.deleteBook(url, req);		
 	}
 
 }
